@@ -1,7 +1,18 @@
 from app.routers import auth, workspaces, integrations, public, services, inventory, forms, staff, conversations, dashboard
 from app.services import automation
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION)
+
+# Set all CORS enabled origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 async def startup_event():
