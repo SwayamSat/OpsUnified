@@ -19,6 +19,7 @@ class FormTemplate(Base):
 
     workspace = relationship("Workspace", back_populates="form_templates")
     submissions = relationship("FormSubmission", back_populates="template")
+    automation_rules = relationship("AutomationRule", back_populates="form_template")
 
 class FormSubmission(Base):
     __tablename__ = "form_submissions"
@@ -56,3 +57,21 @@ class InventoryUsage(Base):
 
     booking = relationship("Booking", back_populates="inventory_usage")
     item = relationship("InventoryItem", back_populates="usages")
+
+class AutomationActionType(str, enum.Enum):
+    SEND_EMAIL = "send_email"
+    SEND_SMS = "send_sms"
+
+class AutomationRule(Base):
+    __tablename__ = "automation_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=False)
+    form_template_id = Column(Integer, ForeignKey("form_templates.id"), nullable=True) # If null, could be global or other triggers
+    name = Column(String, nullable=False)
+    action_type = Column(Enum(AutomationActionType), nullable=False)
+    action_config = Column(JSON, nullable=False) # { "recipient": "user@example.com", "template": "..." }
+    is_active = Column(Integer, default=1) # 1=active, 0=inactive (using Integer for boolean compatibility if needed, else Boolean)
+
+    workspace = relationship("Workspace", back_populates="automation_rules")
+    form_template = relationship("FormTemplate", back_populates="automation_rules")

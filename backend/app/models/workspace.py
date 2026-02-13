@@ -23,4 +23,5 @@ class Workspace(Base):
     services = relationship("Service", back_populates="workspace")
     form_templates = relationship("FormTemplate", back_populates="workspace")
     inventory_items = relationship("InventoryItem", back_populates="workspace")
+    automation_rules = relationship("AutomationRule", back_populates="workspace")
     alerts = relationship("Alert", back_populates="workspace")

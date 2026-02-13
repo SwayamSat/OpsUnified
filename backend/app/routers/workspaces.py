@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core import security
+from app.routers import deps
 from app.models.workspace import Workspace
 from app.models.user import User, UserRole
 from app.schemas.workspace import WorkspaceCreate, Workspace as WorkspaceSchema
@@ -44,6 +45,15 @@ def create_workspace(
     db.commit()
     
     return db_workspace
+
+@router.get("/", response_model=list[WorkspaceSchema])
+def list_workspaces(
+    current_user: User = Depends(deps.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    # Return user's workspace
+    workspace = db.query(Workspace).filter(Workspace.id == current_user.workspace_id).first()
+    return [workspace] if workspace else []
 
 @router.post("/{workspace_id}/activate")
 def activate_workspace(

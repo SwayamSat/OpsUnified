@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.routers import deps
 from app.models.user import User
-from app.models.forms_inventory import FormTemplate
+from app.models.forms_inventory import FormTemplate, FormSubmission
 from pydantic import BaseModel
 from typing import Dict, Any
 
@@ -35,3 +35,14 @@ def list_forms(
     db: Session = Depends(get_db)
 ):
     return db.query(FormTemplate).filter(FormTemplate.workspace_id == current_user.workspace_id).all()
+
+@router.get("/submissions")
+def list_submissions(
+    template_id: int = None,
+    current_user: User = Depends(deps.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(FormSubmission).join(FormTemplate).filter(FormTemplate.workspace_id == current_user.workspace_id)
+    if template_id:
+        query = query.filter(FormSubmission.template_id == template_id)
+    return query.order_by(FormSubmission.submitted_at.desc()).all()

@@ -5,7 +5,8 @@ from app.models.crm import Contact, Conversation, Message, MessageDirection, Mes
 from app.models.operations import Booking, Service
 from app.models.system import Alert
 from app.models.workspace import Workspace
-from app.models.forms_inventory import InventoryItem
+from app.models.workspace import Workspace
+from app.models.forms_inventory import InventoryItem, AutomationRule, AutomationActionType, FormSubmission
 from typing import Dict, Any
 
 def get_db_session():
@@ -101,3 +102,37 @@ def start_automation():
     events.subscribe(events.NEW_CONTACT, send_welcome_message)
     events.subscribe(events.BOOKING_CREATED, handle_booking_created)
     events.subscribe(events.INVENTORY_LOW, handle_inventory_low)
+    events.subscribe(events.FORM_SUBMITTED, handle_form_submitted)
+
+def handle_form_submitted(payload: Dict[str, Any]):
+    db = SessionLocal()
+    try:
+        submission_id = payload.get("submission_id")
+        submission = db.query(FormSubmission).filter(FormSubmission.id == submission_id).first()
+        if not submission: return
+
+        # Check for rules
+        # Rule trigger: form_template_id matches submission.template_id
+        rules = db.query(AutomationRule).filter(
+            AutomationRule.form_template_id == submission.template_id,
+            AutomationRule.is_active == 1
+        ).all()
+
+        for rule in rules:
+            if rule.action_type == AutomationActionType.SEND_EMAIL:
+                # Mock sending email
+                recipient = rule.action_config.get("recipient")
+                if recipient == "contact":
+                    # Get contact email
+                    contact = submission.contact
+                    if contact and contact.email:
+                        print(f"[AUTOMATION] Rule '{rule.name}' triggered. Sending Request Received Email to {contact.email}")
+                else:
+                    print(f"[AUTOMATION] Rule '{rule.name}' triggered. Sending Notification Email to {recipient}")
+            
+            elif rule.action_type == AutomationActionType.SEND_SMS:
+                 print(f"[AUTOMATION] Rule '{rule.name}' triggered. Sending SMS to contact.")
+    except Exception as e:
+        print(f"[AUTOMATION] Error processing form submission rules: {e}")
+    finally:
+        db.close()

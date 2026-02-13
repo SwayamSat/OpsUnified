@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas.public import ContactFormSubmit, ContactResponse
+from app.schemas.public import ContactFormSubmit, ContactResponse, FormSubmissionCreate
+from pydantic import BaseModel
 from app.models.crm import Contact, Conversation, Message, MessageDirection, MessageType
 from app.models.workspace import Workspace, WorkspaceStatus
+from app.models.forms_inventory import FormTemplate, FormSubmission
 from app.core import events
 
 router = APIRouter()
@@ -129,3 +131,55 @@ def create_booking(
              background_tasks.add_task(events.emit, events.INVENTORY_LOW, {"item_id": item.id})
 
     return {"id": booking.id, "status": "confirmed", "message": "Booking created"}
+
+@router.post("/forms/{template_id}/submit", response_model=dict)
+def submit_form_template(
+    template_id: int,
+    submission_in: FormSubmissionCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    # 1. Get Template
+    template = db.query(FormTemplate).filter(FormTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Form template not found")
+
+    # 2. Find or Create Contact
+    contact = None
+    if submission_in.contact_email:
+        contact = db.query(Contact).filter(Contact.email == submission_in.contact_email, Contact.workspace_id == template.workspace_id).first()
+    if not contact and submission_in.contact_phone:
+        contact = db.query(Contact).filter(Contact.phone == submission_in.contact_phone, Contact.workspace_id == template.workspace_id).first()
+    
+    if not contact:
+        # Require at least one contact method if creating new contact?
+        # Or just store as anonymous? System usually requires contact for leads.
+        if not submission_in.contact_email and not submission_in.contact_phone:
+             raise HTTPException(status_code=400, detail="Email or Phone is required to create a contact")
+             
+        contact = Contact(
+            workspace_id=template.workspace_id,
+            name=submission_in.data.get("name") or submission_in.data.get("Name") or "Unknown",
+            email=submission_in.contact_email,
+            phone=submission_in.contact_phone
+        )
+        db.add(contact)
+        db.commit()
+        db.refresh(contact)
+        background_tasks.add_task(events.emit, events.NEW_CONTACT, {"contact_id": contact.id, "workspace_id": template.workspace_id})
+
+    # 3. Create Submission
+    submission = FormSubmission(
+        template_id=template.id,
+        contact_id=contact.id,
+        data=submission_in.data,
+        status="pending"
+    )
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+
+    # 4. Trigger Automation
+    background_tasks.add_task(events.emit, events.FORM_SUBMITTED, {"submission_id": submission.id, "workspace_id": template.workspace_id})
+
+    return {"id": submission.id, "message": "Form submitted successfully"}

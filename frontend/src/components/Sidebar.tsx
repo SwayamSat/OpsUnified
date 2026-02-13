@@ -1,14 +1,17 @@
 "use client"
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Inbox, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, Settings, LogOut, Package, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils'; // Make sure utils exists
 
 const NAV_ITEMS = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Inbox', href: '/inbox', icon: Inbox },
-    { name: 'Staff', href: '/staff', icon: Users }, // We didn't plan a staff page but good to have link
+    { name: 'Leads', href: '/leads', icon: Users },
+    { name: 'Inventory', href: '/inventory', icon: Package },
+    { name: 'Automation', href: '/automation', icon: Zap },
+    // { name: 'Staff', href: '/staff', icon: Users }, // We didn't plan a staff page but good to have link
     // { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

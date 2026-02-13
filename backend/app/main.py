@@ -1,5 +1,6 @@
-from app.routers import auth, workspaces, integrations, public, services, inventory, forms, staff, conversations, dashboard
-from app.services import automation
+from fastapi import FastAPI
+from app.routers import auth, workspaces, integrations, public, services, inventory, forms, staff, conversations, dashboard, automation as automation_router
+from app.services import automation as automation_service
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
@@ -16,7 +17,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    automation.start_automation()
+    automation_service.start_automation()
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}", tags=["auth"])
 app.include_router(workspaces.router, prefix=f"{settings.API_V1_STR}/workspaces", tags=["workspaces"])
@@ -27,6 +28,7 @@ app.include_router(forms.router, prefix=f"{settings.API_V1_STR}/workspaces/forms
 app.include_router(staff.router, prefix=f"{settings.API_V1_STR}/workspaces/staff", tags=["staff"])
 app.include_router(conversations.router, prefix=f"{settings.API_V1_STR}/workspaces/conversations", tags=["conversations"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/workspaces/dashboard", tags=["dashboard"])
+app.include_router(automation_router.router, prefix=f"{settings.API_V1_STR}/workspaces/automation", tags=["automation"])
 app.include_router(public.router, prefix=f"{settings.API_V1_STR}/public", tags=["public"])
 
 @app.get("/")

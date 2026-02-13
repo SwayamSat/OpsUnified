@@ -1,4 +1,4 @@
-import requests
+import httpx
 
 def test_api_login():
     url = "http://localhost:8000/api/v1/login/access-token"
@@ -11,7 +11,7 @@ def test_api_login():
     }
     
     try:
-        response = requests.post(url, data=payload, headers=headers)
+        response = httpx.post(url, data=payload, headers=headers)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
     except Exception as e:
